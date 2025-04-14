@@ -2,7 +2,9 @@
 <H3>REG NO: 212223230047</H3>
 <H3>EX. NO.3</H3>
 <H3>DATE:</H3>
-<H2 aligh = center> Implementation of MLP for a non-linearly separable data</H2>
+
+## <H2 align = center> Implementation of MLP for a non-linearly separable data</H2>
+
 <h3>Aim:</h3>
 To implement a perceptron for classification using Python
 <H3>Theory:</H3>
@@ -51,91 +53,75 @@ The number of layers in MLP is not fixed and thus can have any number of hidden 
 ```python
 import numpy as np
 import pandas as pd
+import io
 import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 
-class Perceptron:
-    def __init__(self, learning_rate=0.1):
-        self.learning_rate = learning_rate
-        self._b = 0.0
-        self._w = None
-        self.misclassified_samples = []
+x=np.array([[0,0,1,1],[0,1,0,1]])
+y=np.array([[0,1,1,0]])
 
-    def fit(self, x: np.array, y: np.array, n_iter=10):
-        self._b = 0.0
-        self._w = np.zeros(x.shape[1])
-        self.misclassified_samples = []
-        for _ in range(n_iter):
-            errors = 0
-            for xi, yi in zip(x, y):
-                update = self.learning_rate * (yi - self.predict(xi))
-                self._b += update
-                self._w += update * xi
-                errors += int(update != 0.0)
-            self.misclassified_samples.append(errors)
+n_x = 2
+n_y = 1
+n_h = 2
+m = x.shape[1]
+lr = 0.1
+np.random.seed(2)
 
-    def f(self, x: np.array) -> float:
-        return np.dot(x, self._w) + self._b
+w1 = np.random.rand(n_h,n_x) # Weight matrix for hidden layer
+w2 = np.random.rand(n_y,n_h) # Weight matrix for output layer
+losses = []
 
-    def predict(self, x: np.array):
-        return np.where(self.f(x) >= 0, 1, -1)
+def sigmoid(z):
+ z= 1/(1+np.exp(-z))
+ return z
 
-# Load and prepare the Iris dataset
-df = pd.read_csv("iris.csv")
-print(df.head())
+def forward_prop(w1,w2,x):
+ z1 = np.dot(w1,x)
+ a1 = sigmoid(z1)
+ z2 = np.dot(w2,a1)
+ a2 = sigmoid(z2)
+ return z1,a1,z2,a2
 
-y = df.iloc[:, 4].values
-x = df.iloc[:, 0:3].values
+def back_prop(m,w1,w2,z1,a1,z2,a2,y):
+ dz2 = a2-y
+ dw2 = np.dot(dz2,a1.T)/m
+ dz1 = np.dot(w2.T,dz2) * a1*(1-a1)
+ dw1 = np.dot(dz1,x.T)/m
+ dw1 = np.reshape(dw1,w1.shape)
+ dw2 = np.reshape(dw2,w2.shape)
+ return dz2,dw2,dz1,dw1
 
-# 3D visualization of the Iris dataset
-fig = plt.figure()
-ax = plt.axes(projection='3d')
-ax.set_title('Iris data set')
-ax.set_xlabel('Sepal length in width (cm)')
-ax.set_ylabel('Sepal width in width (cm)')
-ax.set_zlabel('Petal length in width (cm)')
-ax.scatter(x[:50, 0], x[:50, 1], x[:50, 2], color='red', marker='o', s=4, edgecolor='red', label='Iris Setosa')
-ax.scatter(x[50:100, 0], x[50:100, 2], color='blue', marker='^', s=4, edgecolor='blue', label='Iris Versicolour')
-ax.scatter(x[100:150, 0], x[100:150, 1], x[100:150, 2], color='green', marker='x', s=4, edgecolor='green', label='Iris Virginica')
-plt.legend(loc='upper left')
+iterations = 10000
+for i in range(iterations):
+ z1,a1,z2,a2 = forward_prop(w1,w2,x)
+ loss = -(1/m)*np.sum(y*np.log(a2)+(1-y)*np.log(1-a2))
+ losses.append(loss)
+ da2,dw2,dz1,dw1 = back_prop(m,w1,w2,z1,a1,z2,a2,y)
+ w2 = w2-lr*dw2
+ w1 = w1-lr*dw1
+
+# We plot losses to see how our network is doing
+plt.plot(losses)
+plt.xlabel("EPOCHS")
+plt.ylabel("Loss value")
 plt.show()
 
-# Prepare data for binary classification (Setosa vs Versicolour)
-x = x[0:100, 0:2]
-y = y[0:100]
+def predict(w1,w2,input):
+ z1,a1,z2,a2 = forward_prop(w1,w2,test)
+ a2 = np.squeeze(a2)
+ if a2>=0.5:
+  print( [i[0] for i in input], 1)
+ else:
+  print( [i[0] for i in input], 0)
 
-# 2D visualization of the selected classes
-plt.scatter(x[:50, 0], x[:50, 1], color='red', marker='o', label='Setosa')
-plt.scatter(x[50:100, 0], x[50:100, 1], color='blue', marker='x', label='Versicolour')
-plt.xlabel('Sepal length')
-plt.ylabel('Petal length')
-plt.legend(loc='upper left')
-plt.show()
-
-# Convert labels to binary values (1 for Setosa, -1 for Versicolour)
-y = np.where(y == 'Iris-Setosa', 1, -1)
-
-# Normalize features
-x[:, 0] = (x[:, 0] - x[:, 0].mean()) / x[:, 0].std()
-x[:, 1] = (x[:, 1] - x[:, 1].mean()) / x[:, 1].std()
-
-# Split data into training and test sets
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=0)
-
-# Train the perceptron
-classifier = Perceptron(learning_rate=0.01)
-classifier.fit(x_train, y_train)
-
-# Evaluate the model
-print("accuracy", accuracy_score(classifier.predict(x_test), y_test) * 100)
-
-# Plot training errors over epochs
-plt.plot(range(1, len(classifier.misclassified_samples) + 1), classifier.misclassified_samples, marker='o')
-plt.xlabel('Epochs')
-plt.ylabel('Errors')
-plt.show()
+print('Input',' Output')
+test=np.array([[1],[0]])
+predict(w1,w2,test)
+test=np.array([[1],[1]])
+predict(w1,w2,test)
+test=np.array([[0],[1]])
+predict(w1,w2,test)
+test=np.array([[0],[0]])
+predict(w1,w2,test)
 ```
 
 <H3>Output:</H3>
